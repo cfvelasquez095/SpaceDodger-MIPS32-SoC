@@ -207,7 +207,7 @@
       <elementAttributes>
         <entry>
           <string>Value</string>
-          <long>11</long>
+          <long>536</long>
         </entry>
         <entry>
           <string>Bits</string>
@@ -493,15 +493,11 @@
       <elementAttributes>
         <entry>
           <string>Value</string>
-          <long>536</long>
+          <long>0</long>
         </entry>
         <entry>
           <string>Bits</string>
           <int>10</int>
-        </entry>
-        <entry>
-          <string>intFormat</string>
-          <intFormat>bin</intFormat>
         </entry>
       </elementAttributes>
       <pos x="720" y="260"/>
