@@ -125,9 +125,10 @@ module ControlUnit (
   wire s3;
   wire s4;
   wire s5;
-  wire [2:0] s6;
-  wire [11:0] s7;
+  wire s6;
+  wire [2:0] s7;
   wire [11:0] s8;
+  wire [11:0] s9;
   // R_format
   CompUnsigned #(
     .Bits(6)
@@ -182,51 +183,60 @@ module ControlUnit (
     .b( 6'b10 ),
     .\= ( s5 )
   );
-  PriorityEncoder3 PriorityEncoder3_i6 (
+  // lui
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i6 (
+    .a( Opcode ),
+    .b( 6'b1111 ),
+    .\= ( s6 )
+  );
+  PriorityEncoder3 PriorityEncoder3_i7 (
     .in0( s0 ),
     .in1( s1 ),
     .in2( s2 ),
     .in3( s3 ),
     .in4( s4 ),
     .in5( s5 ),
-    .in6( 1'b0 ),
+    .in6( s6 ),
     .in7( 1'b0 ),
-    .num( s6 )
+    .num( s7 )
   );
   Mux_8x1_NBits #(
     .Bits(12)
   )
-  Mux_8x1_NBits_i7 (
-    .sel( s6 ),
+  Mux_8x1_NBits_i8 (
+    .sel( s7 ),
     .in_0( 12'b101111000 ),
     .in_1( 12'b10010001 ),
     .in_2( 12'b110010110 ),
     .in_3( 12'b1000011000 ),
     .in_4( 12'b10000011000 ),
     .in_5( 12'b100000111000 ),
-    .in_6( 12'b0 ),
+    .in_6( 12'b110110000 ),
     .in_7( 12'b0 ),
-    .out( s7 )
+    .out( s8 )
   );
   Mux_2x1_NBits #(
     .Bits(12)
   )
-  Mux_2x1_NBits_i8 (
+  Mux_2x1_NBits_i9 (
     .sel( rst ),
-    .in_0( s7 ),
+    .in_0( s8 ),
     .in_1( 12'b0 ),
-    .out( s8 )
+    .out( s9 )
   );
-  assign memWrite = s8[0];
-  assign memRead = s8[1];
-  assign memToReg = s8[2];
-  assign aluOp = s8[5:3];
-  assign RegDst = s8[6];
-  assign aluSrc = s8[7];
-  assign RegWrite = s8[8];
-  assign beq = s8[9];
-  assign bne = s8[10];
-  assign jump = s8[11];
+  assign memWrite = s9[0];
+  assign memRead = s9[1];
+  assign memToReg = s9[2];
+  assign aluOp = s9[5:3];
+  assign RegDst = s9[6];
+  assign aluSrc = s9[7];
+  assign RegWrite = s9[8];
+  assign beq = s9[9];
+  assign bne = s9[10];
+  assign jump = s9[11];
 endmodule
 
 module DIG_Register_BUS #(
@@ -381,10 +391,11 @@ module ALUControl (
   wire s3;
   wire s4;
   wire s5;
-  wire [2:0] s6;
-  wire s7;
-  wire [2:0] s8;
-  wire s9;
+  wire s6;
+  wire [2:0] s7;
+  wire s8;
+  wire [2:0] s9;
+  wire s10;
   // ADD
   CompUnsigned #(
     .Bits(6)
@@ -436,7 +447,7 @@ module ALUControl (
   CompUnsigned_i5 (
     .a( aluOp ),
     .b( 3'b111 ),
-    .\= ( s9 )
+    .\= ( s10 )
   );
   // XOR
   CompUnsigned #(
@@ -447,34 +458,43 @@ module ALUControl (
     .b( 6'b100110 ),
     .\= ( s5 )
   );
-  PriorityEncoder3 PriorityEncoder3_i7 (
+  // LUI
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i7 (
+    .a( Func ),
+    .b( 6'b1111 ),
+    .\= ( s6 )
+  );
+  PriorityEncoder3 PriorityEncoder3_i8 (
     .in0( s1 ),
     .in1( s2 ),
     .in2( s0 ),
     .in3( s3 ),
     .in4( s4 ),
     .in5( s5 ),
-    .in6( 1'b0 ),
+    .in6( s6 ),
     .in7( 1'b0 ),
-    .num( s6 ),
-    .any( s7 )
-  );
-  Mux_2x1_NBits #(
-    .Bits(3)
-  )
-  Mux_2x1_NBits_i8 (
-    .sel( s7 ),
-    .in_0( 3'b101 ),
-    .in_1( s6 ),
-    .out( s8 )
+    .num( s7 ),
+    .any( s8 )
   );
   Mux_2x1_NBits #(
     .Bits(3)
   )
   Mux_2x1_NBits_i9 (
-    .sel( s9 ),
+    .sel( s8 ),
+    .in_0( 3'b101 ),
+    .in_1( s7 ),
+    .out( s9 )
+  );
+  Mux_2x1_NBits #(
+    .Bits(3)
+  )
+  Mux_2x1_NBits_i10 (
+    .sel( s10 ),
     .in_0( aluOp ),
-    .in_1( s8 ),
+    .in_1( s9 ),
     .out( aluFunc )
   );
 endmodule
@@ -585,21 +605,14 @@ module ALU (
     .\< ( s7 )
   );
   assign s5 = (a ^ b);
-  DIG_Add #(
-    .Bits(32)
-  )
-  DIG_Add_i3 (
-    .a( a ),
-    .b( b ),
-    .c_i( 1'b0 ),
-    .s( s6 )
-  );
+  assign s6[15:0] = 16'b0;
+  assign s6[31:16] = b[15:0];
   assign s4[0] = s7;
   assign s4[31:1] = 31'b0;
   Mux_8x1_NBits #(
     .Bits(32)
   )
-  Mux_8x1_NBits_i4 (
+  Mux_8x1_NBits_i3 (
     .sel( op ),
     .in_0( s2 ),
     .in_1( s3 ),
@@ -614,7 +627,7 @@ module ALU (
   CompUnsigned #(
     .Bits(32)
   )
-  CompUnsigned_i5 (
+  CompUnsigned_i4 (
     .a( res_temp ),
     .b( 32'b0 ),
     .\= ( isZero )
