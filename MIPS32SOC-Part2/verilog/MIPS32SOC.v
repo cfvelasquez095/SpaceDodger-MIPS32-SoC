@@ -38,7 +38,7 @@ module CompUnsigned #(
     assign \< = a < b;
 endmodule
 
-module PriorityEncoder3 (
+module PriorityEncoder4 (
     input in0,
     input in1,
     input in2,
@@ -47,37 +47,61 @@ module PriorityEncoder3 (
     input in5,
     input in6,
     input in7,
-    output reg [2:0] num,
+    input in8,
+    input in9,
+    input in10,
+    input in11,
+    input in12,
+    input in13,
+    input in14,
+    input in15,
+    output reg [3:0] num,
     output any
 );
     always @ (*) begin
-        if (in7 == 1'b1)
-            num = 3'h7;
+        if (in15 == 1'b1)
+            num = 4'hf;
+        else if (in14 == 1'b1)
+            num = 4'he;
+        else if (in13 == 1'b1)
+            num = 4'hd;
+        else if (in12 == 1'b1)
+            num = 4'hc;
+        else if (in11 == 1'b1)
+            num = 4'hb;
+        else if (in10 == 1'b1)
+            num = 4'ha;
+        else if (in9 == 1'b1)
+            num = 4'h9;
+        else if (in8 == 1'b1)
+            num = 4'h8;
+        else if (in7 == 1'b1)
+            num = 4'h7;
         else if (in6 == 1'b1)
-            num = 3'h6;
+            num = 4'h6;
         else if (in5 == 1'b1)
-            num = 3'h5;
+            num = 4'h5;
         else if (in4 == 1'b1)
-            num = 3'h4;
+            num = 4'h4;
         else if (in3 == 1'b1)
-            num = 3'h3;
+            num = 4'h3;
         else if (in2 == 1'b1)
-            num = 3'h2;
+            num = 4'h2;
         else if (in1 == 1'b1)
-            num = 3'h1;
+            num = 4'h1;
         else 
-            num = 3'h0;
+            num = 4'h0;
     end
 
-    assign any = in0 | in1 | in2 | in3 | in4 | in5 | in6 | in7;
+    assign any = in0 | in1 | in2 | in3 | in4 | in5 | in6 | in7 | in8 | in9 | in10 | in11 | in12 | in13 | in14 | in15;
 endmodule
 
 
-module Mux_8x1_NBits #(
+module Mux_16x1_NBits #(
     parameter Bits = 2
 )
 (
-    input [2:0] sel,
+    input [3:0] sel,
     input [(Bits - 1):0] in_0,
     input [(Bits - 1):0] in_1,
     input [(Bits - 1):0] in_2,
@@ -86,18 +110,34 @@ module Mux_8x1_NBits #(
     input [(Bits - 1):0] in_5,
     input [(Bits - 1):0] in_6,
     input [(Bits - 1):0] in_7,
+    input [(Bits - 1):0] in_8,
+    input [(Bits - 1):0] in_9,
+    input [(Bits - 1):0] in_10,
+    input [(Bits - 1):0] in_11,
+    input [(Bits - 1):0] in_12,
+    input [(Bits - 1):0] in_13,
+    input [(Bits - 1):0] in_14,
+    input [(Bits - 1):0] in_15,
     output reg [(Bits - 1):0] out
 );
     always @ (*) begin
         case (sel)
-            3'h0: out = in_0;
-            3'h1: out = in_1;
-            3'h2: out = in_2;
-            3'h3: out = in_3;
-            3'h4: out = in_4;
-            3'h5: out = in_5;
-            3'h6: out = in_6;
-            3'h7: out = in_7;
+            4'h0: out = in_0;
+            4'h1: out = in_1;
+            4'h2: out = in_2;
+            4'h3: out = in_3;
+            4'h4: out = in_4;
+            4'h5: out = in_5;
+            4'h6: out = in_6;
+            4'h7: out = in_7;
+            4'h8: out = in_8;
+            4'h9: out = in_9;
+            4'ha: out = in_10;
+            4'hb: out = in_11;
+            4'hc: out = in_12;
+            4'hd: out = in_13;
+            4'he: out = in_14;
+            4'hf: out = in_15;
             default:
                 out = 'h0;
         endcase
@@ -117,7 +157,8 @@ module ControlUnit (
   output RegWrite,
   output beq,
   output jump,
-  output bne
+  output bne,
+  output zeroExtend
 );
   wire s0;
   wire s1;
@@ -126,9 +167,13 @@ module ControlUnit (
   wire s4;
   wire s5;
   wire s6;
-  wire [2:0] s7;
-  wire [11:0] s8;
-  wire [11:0] s9;
+  wire s7;
+  wire s8;
+  wire s9;
+  wire s10;
+  wire [3:0] s11;
+  wire [12:0] s12;
+  wire [12:0] s13;
   // R_format
   CompUnsigned #(
     .Bits(6)
@@ -192,7 +237,43 @@ module ControlUnit (
     .b( 6'b1111 ),
     .\= ( s6 )
   );
-  PriorityEncoder3 PriorityEncoder3_i7 (
+  // addi
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i7 (
+    .a( Opcode ),
+    .b( 6'b1000 ),
+    .\= ( s7 )
+  );
+  // andi
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i8 (
+    .a( Opcode ),
+    .b( 6'b1100 ),
+    .\= ( s8 )
+  );
+  // ori
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i9 (
+    .a( Opcode ),
+    .b( 6'b1101 ),
+    .\= ( s9 )
+  );
+  // xori
+  CompUnsigned #(
+    .Bits(6)
+  )
+  CompUnsigned_i10 (
+    .a( Opcode ),
+    .b( 6'b1110 ),
+    .\= ( s10 )
+  );
+  PriorityEncoder4 PriorityEncoder4_i11 (
     .in0( s0 ),
     .in1( s1 ),
     .in2( s2 ),
@@ -200,43 +281,60 @@ module ControlUnit (
     .in4( s4 ),
     .in5( s5 ),
     .in6( s6 ),
-    .in7( 1'b0 ),
-    .num( s7 )
+    .in7( s7 ),
+    .in8( s8 ),
+    .in9( s9 ),
+    .in10( s10 ),
+    .in11( 1'b0 ),
+    .in12( 1'b0 ),
+    .in13( 1'b0 ),
+    .in14( 1'b0 ),
+    .in15( 1'b0 ),
+    .num( s11 )
   );
-  Mux_8x1_NBits #(
-    .Bits(12)
+  Mux_16x1_NBits #(
+    .Bits(13)
   )
-  Mux_8x1_NBits_i8 (
-    .sel( s7 ),
-    .in_0( 12'b101111000 ),
-    .in_1( 12'b10010001 ),
-    .in_2( 12'b110010110 ),
-    .in_3( 12'b1000011000 ),
-    .in_4( 12'b10000011000 ),
-    .in_5( 12'b100000111000 ),
-    .in_6( 12'b110110000 ),
-    .in_7( 12'b0 ),
-    .out( s8 )
+  Mux_16x1_NBits_i12 (
+    .sel( s11 ),
+    .in_0( 13'b101111000 ),
+    .in_1( 13'b10010001 ),
+    .in_2( 13'b110010110 ),
+    .in_3( 13'b1000011000 ),
+    .in_4( 13'b10000011000 ),
+    .in_5( 13'b100000111000 ),
+    .in_6( 13'b110110000 ),
+    .in_7( 13'b110010000 ),
+    .in_8( 13'b1000110000000 ),
+    .in_9( 13'b1000110001000 ),
+    .in_10( 13'b1000110101000 ),
+    .in_11( 13'b0 ),
+    .in_12( 13'b0 ),
+    .in_13( 13'b0 ),
+    .in_14( 13'b0 ),
+    .in_15( 13'b0 ),
+    .out( s12 )
   );
   Mux_2x1_NBits #(
-    .Bits(12)
+    .Bits(13)
   )
-  Mux_2x1_NBits_i9 (
+  Mux_2x1_NBits_i13 (
     .sel( rst ),
-    .in_0( s8 ),
-    .in_1( 12'b0 ),
-    .out( s9 )
+    .in_0( s12 ),
+    .in_1( 13'b0 ),
+    .out( s13 )
   );
-  assign memWrite = s9[0];
-  assign memRead = s9[1];
-  assign memToReg = s9[2];
-  assign aluOp = s9[5:3];
-  assign RegDst = s9[6];
-  assign aluSrc = s9[7];
-  assign RegWrite = s9[8];
-  assign beq = s9[9];
-  assign bne = s9[10];
-  assign jump = s9[11];
+  assign memWrite = s13[0];
+  assign memRead = s13[1];
+  assign memToReg = s13[2];
+  assign aluOp = s13[5:3];
+  assign RegDst = s13[6];
+  assign aluSrc = s13[7];
+  assign RegWrite = s13[8];
+  assign beq = s13[9];
+  assign bne = s13[10];
+  assign jump = s13[11];
+  assign zeroExtend = s13[12];
 endmodule
 
 module DIG_Register_BUS #(
@@ -378,6 +476,40 @@ module DIG_BitExtender #(
 endmodule
 
 
+
+module PriorityEncoder3 (
+    input in0,
+    input in1,
+    input in2,
+    input in3,
+    input in4,
+    input in5,
+    input in6,
+    input in7,
+    output reg [2:0] num,
+    output any
+);
+    always @ (*) begin
+        if (in7 == 1'b1)
+            num = 3'h7;
+        else if (in6 == 1'b1)
+            num = 3'h6;
+        else if (in5 == 1'b1)
+            num = 3'h5;
+        else if (in4 == 1'b1)
+            num = 3'h4;
+        else if (in3 == 1'b1)
+            num = 3'h3;
+        else if (in2 == 1'b1)
+            num = 3'h2;
+        else if (in1 == 1'b1)
+            num = 3'h1;
+        else 
+            num = 3'h0;
+    end
+
+    assign any = in0 | in1 | in2 | in3 | in4 | in5 | in6 | in7;
+endmodule
 
 
 module ALUControl (
@@ -557,6 +689,38 @@ module CompSigned #(
     assign \> = $signed(a) > $signed(b);
     assign \= = $signed(a) == $signed(b);
     assign \< = $signed(a) < $signed(b);
+endmodule
+
+
+module Mux_8x1_NBits #(
+    parameter Bits = 2
+)
+(
+    input [2:0] sel,
+    input [(Bits - 1):0] in_0,
+    input [(Bits - 1):0] in_1,
+    input [(Bits - 1):0] in_2,
+    input [(Bits - 1):0] in_3,
+    input [(Bits - 1):0] in_4,
+    input [(Bits - 1):0] in_5,
+    input [(Bits - 1):0] in_6,
+    input [(Bits - 1):0] in_7,
+    output reg [(Bits - 1):0] out
+);
+    always @ (*) begin
+        case (sel)
+            3'h0: out = in_0;
+            3'h1: out = in_1;
+            3'h2: out = in_2;
+            3'h3: out = in_3;
+            3'h4: out = in_4;
+            3'h5: out = in_5;
+            3'h6: out = in_6;
+            3'h7: out = in_7;
+            default:
+                out = 'h0;
+        endcase
+    end
 endmodule
 
 
@@ -816,6 +980,7 @@ module MIPS32SOC (
   wire [15:0] s15;
   wire [31:0] s16;
   wire aluSrc;
+  wire [31:0] s17;
   wire RegDst;
   wire [2:0] aluOp;
   wire memWrite;
@@ -824,19 +989,21 @@ module MIPS32SOC (
   wire beq;
   wire jump;
   wire bne;
-  wire [7:0] s17;
-  wire [31:0] s18;
+  wire zeroExt;
+  wire [7:0] s18;
   wire [31:0] s19;
   wire [31:0] s20;
-  wire s21;
-  wire [31:0] s22;
+  wire [31:0] s21;
+  wire s22;
   wire [31:0] s23;
+  wire [31:0] s24;
   wire [1:0] const2b0;
-  wire [33:0] s24;
-  wire [27:0] s25;
-  wire s26;
-  wire [10:0] s27;
-  wire [9:0] s28;
+  wire [33:0] s25;
+  wire [27:0] s26;
+  wire s27;
+  wire [10:0] s28;
+  wire [9:0] s29;
+  wire [31:0] s30;
   assign const2b0 = 2'b0;
   assign invalid_opcode = 1'b0;
   Mux_2x1_NBits #(
@@ -860,10 +1027,11 @@ module MIPS32SOC (
     .RegWrite( RegWrite ),
     .beq( beq ),
     .jump( jump ),
-    .bne( bne )
+    .bne( bne ),
+    .zeroExtend( zeroExt )
   );
-  assign s24[1:0] = const2b0;
-  assign s24[33:2] = s16;
+  assign s25[1:0] = const2b0;
+  assign s25[33:2] = s16;
   // PC
   DIG_Register_BUS #(
     .Bits(32)
@@ -874,8 +1042,8 @@ module MIPS32SOC (
     .en( 1'b1 ),
     .Q( s1 )
   );
-  assign s26 = (memWrite | memRead);
-  assign s19 = s24[31:0];
+  assign s27 = (memWrite | memRead);
+  assign s20 = s25[31:0];
   DIG_Add #(
     .Bits(32)
   )
@@ -887,7 +1055,7 @@ module MIPS32SOC (
   );
   PCDecoder PCDecoder_i4 (
     .VirtualPC( s1 ),
-    .PhysicalPC( s28 ),
+    .PhysicalPC( s29 ),
     .InvalidPC( invalid_pc )
   );
   DIG_Add #(
@@ -895,19 +1063,19 @@ module MIPS32SOC (
   )
   DIG_Add_i5 (
     .a( s4 ),
-    .b( s19 ),
+    .b( s20 ),
     .c_i( 1'b0 ),
-    .s( s20 )
+    .s( s21 )
   );
-  assign s2 = s28[9:2];
+  assign s2 = s29[9:2];
   // InstMem
   DIG_ROM_256X32_InstMem DIG_ROM_256X32_InstMem_i6 (
     .A( s2 ),
     .sel( 1'b1 ),
     .D( s3 )
   );
-  assign s25[1:0] = 2'b0;
-  assign s25[27:2] = s3[25:0];
+  assign s26[1:0] = 2'b0;
+  assign s26[27:2] = s3[25:0];
   assign Func = s3[5:0];
   assign s10 = s3[15:11];
   assign s7 = s3[20:16];
@@ -936,14 +1104,25 @@ module MIPS32SOC (
     .Func( Func ),
     .aluFunc( aluFunc )
   );
-  assign s23[27:0] = s25;
-  assign s23[31:28] = s4[31:28];
+  assign s24[27:0] = s26;
+  assign s24[31:28] = s4[31:28];
+  assign s30[15:0] = s15;
+  assign s30[31:16] = 16'b0;
+  Mux_2x1_NBits #(
+    .Bits(32)
+  )
+  Mux_2x1_NBits_i10 (
+    .sel( zeroExt ),
+    .in_0( s16 ),
+    .in_1( s30 ),
+    .out( s17 )
+  );
   // Reg File
   DIG_RegisterFile #(
     .Bits(32),
     .AddrBits(5)
   )
-  DIG_RegisterFile_i10 (
+  DIG_RegisterFile_i11 (
     .Din( wData ),
     .we( RegWrite ),
     .Rw( s5 ),
@@ -953,7 +1132,7 @@ module MIPS32SOC (
     .Da( s8 ),
     .Db( s9 )
   );
-  ALU ALU_i11 (
+  ALU ALU_i12 (
     .a( s8 ),
     .b( s12 ),
     .op( aluFunc ),
@@ -963,10 +1142,10 @@ module MIPS32SOC (
   Mux_2x1_NBits #(
     .Bits(32)
   )
-  Mux_2x1_NBits_i12 (
+  Mux_2x1_NBits_i13 (
     .sel( aluSrc ),
     .in_0( s9 ),
-    .in_1( s16 ),
+    .in_1( s17 ),
     .out( s12 )
   );
   // Data Mem
@@ -974,47 +1153,47 @@ module MIPS32SOC (
     .Bits(32),
     .AddrBits(8)
   )
-  DIG_RAMDualPort_i13 (
-    .A( s17 ),
+  DIG_RAMDualPort_i14 (
+    .A( s18 ),
     .Din( s9 ),
     .str( memWrite ),
     .C( clk ),
     .ld( memRead ),
-    .D( s18 )
-  );
-  Mux_2x1_NBits #(
-    .Bits(32)
-  )
-  Mux_2x1_NBits_i14 (
-    .sel( memToReg ),
-    .in_0( s13 ),
-    .in_1( s18 ),
-    .out( wData )
+    .D( s19 )
   );
   Mux_2x1_NBits #(
     .Bits(32)
   )
   Mux_2x1_NBits_i15 (
-    .sel( s21 ),
-    .in_0( s4 ),
-    .in_1( s20 ),
-    .out( s22 )
+    .sel( memToReg ),
+    .in_0( s13 ),
+    .in_1( s19 ),
+    .out( wData )
   );
   Mux_2x1_NBits #(
     .Bits(32)
   )
   Mux_2x1_NBits_i16 (
+    .sel( s22 ),
+    .in_0( s4 ),
+    .in_1( s21 ),
+    .out( s23 )
+  );
+  Mux_2x1_NBits #(
+    .Bits(32)
+  )
+  Mux_2x1_NBits_i17 (
     .sel( jump ),
-    .in_0( s22 ),
-    .in_1( s23 ),
+    .in_0( s23 ),
+    .in_1( s24 ),
     .out( s11 )
   );
-  assign s21 = ((beq & s14) | (bne & ~ s14));
-  MemDecoder MemDecoder_i17 (
+  assign s22 = ((beq & s14) | (bne & ~ s14));
+  MemDecoder MemDecoder_i18 (
     .VirtualAddress( s13 ),
-    .Enable( s26 ),
-    .PhysicalAddress( s27 ),
+    .Enable( s27 ),
+    .PhysicalAddress( s28 ),
     .InvalidAddress( invalid_addr )
   );
-  assign s17 = s27[9:2];
+  assign s18 = s28[9:2];
 endmodule
