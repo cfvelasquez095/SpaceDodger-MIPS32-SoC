@@ -497,8 +497,11 @@ endmodule
 module ALUControl (
   input [3:0] aluOp,
   input [5:0] Func,
-  output [3:0] aluFunc
+  output [3:0] aluFunc,
+  output mfhi,
+  output mflo
 );
+  wire [3:0] aluFunc_temp;
   wire s0;
   wire s1;
   wire s2;
@@ -657,9 +660,48 @@ module ALUControl (
     .sel( s14 ),
     .in_0( aluOp ),
     .in_1( s13 ),
-    .out( aluFunc )
+    .out( aluFunc_temp )
   );
+  CompUnsigned #(
+    .Bits(4)
+  )
+  CompUnsigned_i15 (
+    .a( aluFunc_temp ),
+    .b( 4'b1001 ),
+    .\= ( mfhi )
+  );
+  CompUnsigned #(
+    .Bits(4)
+  )
+  CompUnsigned_i16 (
+    .a( aluFunc_temp ),
+    .b( 4'b1010 ),
+    .\= ( mflo )
+  );
+  assign aluFunc = aluFunc_temp;
 endmodule
+module PriorityEncoder2 (
+    input in0,
+    input in1,
+    input in2,
+    input in3,
+    output reg [1:0] num,
+    output any
+);
+    always @ (*) begin
+        if (in3 == 1'b1)
+            num = 2'h3;
+        else if (in2 == 1'b1)
+            num = 2'h2;
+        else if (in1 == 1'b1)
+            num = 2'h1;
+        else 
+            num = 2'h0;
+    end
+
+    assign any = in0 | in1 | in2 | in3;
+endmodule
+
 module DIG_RegisterFile
 #(
     parameter Bits = 8,
@@ -1011,6 +1053,30 @@ module MemDecoder (
   assign PhysicalAddress = s17[10:0];
 endmodule
 
+module Mux_4x1_NBits #(
+    parameter Bits = 2
+)
+(
+    input [1:0] sel,
+    input [(Bits - 1):0] in_0,
+    input [(Bits - 1):0] in_1,
+    input [(Bits - 1):0] in_2,
+    input [(Bits - 1):0] in_3,
+    output reg [(Bits - 1):0] out
+);
+    always @ (*) begin
+        case (sel)
+            2'h0: out = in_0;
+            2'h1: out = in_1;
+            2'h2: out = in_2;
+            2'h3: out = in_3;
+            default:
+                out = 'h0;
+        endcase
+    end
+endmodule
+
+
 module MIPS32SOC (
   input clk,
   input rst,
@@ -1046,6 +1112,8 @@ module MIPS32SOC (
   wire [31:0] s17;
   wire RegDst;
   wire [3:0] aluOp;
+  wire mfhi;
+  wire mflo;
   wire memWrite;
   wire memRead;
   wire memToReg;
@@ -1057,18 +1125,20 @@ module MIPS32SOC (
   wire [31:0] s19;
   wire [31:0] s20;
   wire [31:0] s21;
-  wire s22;
-  wire [31:0] s23;
+  wire [31:0] s22;
+  wire s23;
   wire [31:0] s24;
+  wire [31:0] s25;
   wire [1:0] const2b0;
-  wire [33:0] s25;
-  wire [27:0] s26;
-  wire s27;
-  wire [10:0] s28;
-  wire [9:0] s29;
-  wire [31:0] s30;
-  wire [31:0] x;
-  wire [31:0] y;
+  wire [33:0] s26;
+  wire [27:0] s27;
+  wire s28;
+  wire [10:0] s29;
+  wire [9:0] s30;
+  wire [31:0] s31;
+  wire [31:0] high;
+  wire [31:0] low;
+  wire [1:0] s32;
   assign const2b0 = 2'b0;
   assign invalid_opcode = 1'b0;
   Mux_2x1_NBits #(
@@ -1095,8 +1165,8 @@ module MIPS32SOC (
     .bne( bne ),
     .zeroExtend( zeroExt )
   );
-  assign s25[1:0] = const2b0;
-  assign s25[33:2] = s16;
+  assign s26[1:0] = const2b0;
+  assign s26[33:2] = s16;
   // PC
   DIG_Register_BUS #(
     .Bits(32)
@@ -1107,8 +1177,8 @@ module MIPS32SOC (
     .en( 1'b1 ),
     .Q( s1 )
   );
-  assign s27 = (memWrite | memRead);
-  assign s20 = s25[31:0];
+  assign s28 = (memWrite | memRead);
+  assign s21 = s26[31:0];
   DIG_Add #(
     .Bits(32)
   )
@@ -1120,7 +1190,7 @@ module MIPS32SOC (
   );
   PCDecoder PCDecoder_i4 (
     .VirtualPC( s1 ),
-    .PhysicalPC( s29 ),
+    .PhysicalPC( s30 ),
     .InvalidPC( invalid_pc )
   );
   DIG_Add #(
@@ -1128,19 +1198,19 @@ module MIPS32SOC (
   )
   DIG_Add_i5 (
     .a( s4 ),
-    .b( s20 ),
+    .b( s21 ),
     .c_i( 1'b0 ),
-    .s( s21 )
+    .s( s22 )
   );
-  assign s2 = s29[9:2];
+  assign s2 = s30[9:2];
   // InstMem
   DIG_ROM_256X32_InstMem DIG_ROM_256X32_InstMem_i6 (
     .A( s2 ),
     .sel( 1'b1 ),
     .D( s3 )
   );
-  assign s26[1:0] = 2'b0;
-  assign s26[27:2] = s3[25:0];
+  assign s27[1:0] = 2'b0;
+  assign s27[27:2] = s3[25:0];
   assign Func = s3[5:0];
   assign s10 = s3[15:11];
   assign s7 = s3[20:16];
@@ -1167,27 +1237,36 @@ module MIPS32SOC (
   ALUControl ALUControl_i9 (
     .aluOp( aluOp ),
     .Func( Func ),
-    .aluFunc( aluFunc )
+    .aluFunc( aluFunc ),
+    .mfhi( mfhi ),
+    .mflo( mflo )
   );
-  assign s24[27:0] = s26;
-  assign s24[31:28] = s4[31:28];
-  assign s30[15:0] = s15;
-  assign s30[31:16] = 16'b0;
+  assign s25[27:0] = s27;
+  assign s25[31:28] = s4[31:28];
+  assign s31[15:0] = s15;
+  assign s31[31:16] = 16'b0;
   Mux_2x1_NBits #(
     .Bits(32)
   )
   Mux_2x1_NBits_i10 (
     .sel( zeroExt ),
     .in_0( s16 ),
-    .in_1( s30 ),
+    .in_1( s31 ),
     .out( s17 )
+  );
+  PriorityEncoder2 PriorityEncoder2_i11 (
+    .in0( memToReg ),
+    .in1( mflo ),
+    .in2( mfhi ),
+    .in3( 1'b0 ),
+    .num( s32 )
   );
   // Reg File
   DIG_RegisterFile #(
     .Bits(32),
     .AddrBits(5)
   )
-  DIG_RegisterFile_i11 (
+  DIG_RegisterFile_i12 (
     .Din( wData ),
     .we( RegWrite ),
     .Rw( s5 ),
@@ -1197,7 +1276,7 @@ module MIPS32SOC (
     .Da( s8 ),
     .Db( s9 )
   );
-  ALU ALU_i12 (
+  ALU ALU_i13 (
     .a( s8 ),
     .b( s12 ),
     .op( aluFunc ),
@@ -1209,7 +1288,7 @@ module MIPS32SOC (
   Mux_2x1_NBits #(
     .Bits(32)
   )
-  Mux_2x1_NBits_i13 (
+  Mux_2x1_NBits_i14 (
     .sel( aluSrc ),
     .in_0( s9 ),
     .in_1( s17 ),
@@ -1220,7 +1299,7 @@ module MIPS32SOC (
     .Bits(32),
     .AddrBits(8)
   )
-  DIG_RAMDualPort_i14 (
+  DIG_RAMDualPort_i15 (
     .A( s18 ),
     .Din( s9 ),
     .str( memWrite ),
@@ -1231,56 +1310,67 @@ module MIPS32SOC (
   Mux_2x1_NBits #(
     .Bits(32)
   )
-  Mux_2x1_NBits_i15 (
+  Mux_2x1_NBits_i16 (
     .sel( memToReg ),
     .in_0( s13 ),
     .in_1( s19 ),
-    .out( wData )
-  );
-  Mux_2x1_NBits #(
-    .Bits(32)
-  )
-  Mux_2x1_NBits_i16 (
-    .sel( s22 ),
-    .in_0( s4 ),
-    .in_1( s21 ),
-    .out( s23 )
+    .out( s20 )
   );
   Mux_2x1_NBits #(
     .Bits(32)
   )
   Mux_2x1_NBits_i17 (
+    .sel( s23 ),
+    .in_0( s4 ),
+    .in_1( s22 ),
+    .out( s24 )
+  );
+  Mux_2x1_NBits #(
+    .Bits(32)
+  )
+  Mux_2x1_NBits_i18 (
     .sel( jump ),
-    .in_0( s23 ),
-    .in_1( s24 ),
+    .in_0( s24 ),
+    .in_1( s25 ),
     .out( s11 )
   );
-  assign s22 = ((beq & s14) | (bne & ~ s14));
-  MemDecoder MemDecoder_i18 (
+  assign s23 = ((beq & s14) | (bne & ~ s14));
+  MemDecoder MemDecoder_i19 (
     .VirtualAddress( s13 ),
-    .Enable( s27 ),
-    .PhysicalAddress( s28 ),
+    .Enable( s28 ),
+    .PhysicalAddress( s29 ),
     .InvalidAddress( invalid_addr )
   );
   // High
   DIG_Register_BUS #(
     .Bits(32)
   )
-  DIG_Register_BUS_i19 (
+  DIG_Register_BUS_i20 (
     .D( hi ),
     .C( clk ),
     .en( RegWrite ),
-    .Q( x )
+    .Q( high )
   );
   // Low
   DIG_Register_BUS #(
     .Bits(32)
   )
-  DIG_Register_BUS_i20 (
+  DIG_Register_BUS_i21 (
     .D( lo ),
     .C( clk ),
     .en( RegWrite ),
-    .Q( y )
+    .Q( low )
   );
-  assign s18 = s28[9:2];
+  Mux_4x1_NBits #(
+    .Bits(32)
+  )
+  Mux_4x1_NBits_i22 (
+    .sel( s32 ),
+    .in_0( s20 ),
+    .in_1( low ),
+    .in_2( high ),
+    .in_3( 32'b0 ),
+    .out( wData )
+  );
+  assign s18 = s29[9:2];
 endmodule
