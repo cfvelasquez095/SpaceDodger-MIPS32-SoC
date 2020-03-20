@@ -1187,7 +1187,7 @@
       <elementAttributes>
         <entry>
           <string>NetName</string>
-          <string>mh</string>
+          <string>hi</string>
         </entry>
       </elementAttributes>
       <pos x="1080" y="280"/>
@@ -1201,7 +1201,7 @@
         </entry>
         <entry>
           <string>NetName</string>
-          <string>mh</string>
+          <string>hi</string>
         </entry>
       </elementAttributes>
       <pos x="1180" y="520"/>
@@ -1211,20 +1211,10 @@
       <elementAttributes>
         <entry>
           <string>NetName</string>
-          <string>dl</string>
+          <string>lo</string>
         </entry>
       </elementAttributes>
       <pos x="1080" y="300"/>
-    </visualElement>
-    <visualElement>
-      <elementName>Tunnel</elementName>
-      <elementAttributes>
-        <entry>
-          <string>NetName</string>
-          <string>ml</string>
-        </entry>
-      </elementAttributes>
-      <pos x="1080" y="320"/>
     </visualElement>
     <visualElement>
       <elementName>Tunnel</elementName>
@@ -1235,7 +1225,7 @@
         </entry>
         <entry>
           <string>NetName</string>
-          <string>ml</string>
+          <string>lo</string>
         </entry>
       </elementAttributes>
       <pos x="1180" y="640"/>
@@ -1257,10 +1247,6 @@
     <wire>
       <p1 x="1660" y="320"/>
       <p2 x="1680" y="320"/>
-    </wire>
-    <wire>
-      <p1 x="1060" y="320"/>
-      <p2 x="1080" y="320"/>
     </wire>
     <wire>
       <p1 x="1500" y="0"/>

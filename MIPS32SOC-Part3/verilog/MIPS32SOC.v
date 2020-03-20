@@ -720,24 +720,23 @@ module DIG_Mul_signed #(
 endmodule
 
 module Div(
-	input [31:0] a,
-	input [31:0] b,
-	output [63:0] div
+	input signed [31:0] a,
+	input signed [31:0] b,
+	output signed [31:0] quo,
+	output signed [31:0] rem
 );
-
-	assign div = a / b;
+	assign quo = a / b;
+	assign rem = a % b;
 endmodule
 
 module ALU (
   input [31:0] a,
   input [31:0] b,
   input [3:0] op,
-  input clk,
   output [31:0] res,
   output isZero,
-  output [31:0] mult_high,
-  output [31:0] div_low,
-  output [31:0] mult_low
+  output [31:0] high,
+  output [31:0] low
 );
   wire [31:0] s0;
   wire [31:0] s1;
@@ -746,10 +745,13 @@ module ALU (
   wire [31:0] s4;
   wire [31:0] s5;
   wire [31:0] s6;
-  wire [31:0] res_temp;
-  wire s7;
-  wire [63:0] s8;
-  wire [63:0] s9;
+  wire [31:0] s7;
+  wire [31:0] s8;
+  wire [31:0] low_temp;
+  wire s9;
+  wire [63:0] s10;
+  wire [31:0] s11;
+  wire [31:0] s12;
   DIG_Add #(
     .Bits(32)
   )
@@ -776,7 +778,7 @@ module ALU (
   CompSigned_i2 (
     .a( a ),
     .b( b ),
-    .\< ( s7 )
+    .\< ( s9 )
   );
   assign s5 = (a ^ b);
   assign s6[15:0] = 16'b0;
@@ -787,19 +789,19 @@ module ALU (
   DIG_Mul_signed_i3 (
     .a( a ),
     .b( b ),
-    .mul( s8 )
+    .mul( s10 )
   );
   // Div
   Div Div_i4 (
     .a( a ),
     .b( b ),
-    .div( s9 )
+    .quo( s8 ),
+    .rem( s12 )
   );
-  assign s4[0] = s7;
+  assign s4[0] = s9;
   assign s4[31:1] = 31'b0;
-  assign mult_low = s8[31:0];
-  assign mult_high = s8[63:32];
-  assign div_low = s9[31:0];
+  assign s7 = s10[31:0];
+  assign s11 = s10[63:32];
   Mux_16x1_NBits #(
     .Bits(32)
   )
@@ -812,8 +814,8 @@ module ALU (
     .in_4( s4 ),
     .in_5( s5 ),
     .in_6( s6 ),
-    .in_7( 32'b0 ),
-    .in_8( 32'b0 ),
+    .in_7( s7 ),
+    .in_8( s8 ),
     .in_9( 32'b0 ),
     .in_10( 32'b0 ),
     .in_11( 32'b0 ),
@@ -821,17 +823,41 @@ module ALU (
     .in_13( 32'b0 ),
     .in_14( 32'b0 ),
     .in_15( 32'b0 ),
-    .out( res_temp )
+    .out( low_temp )
+  );
+  Mux_16x1_NBits #(
+    .Bits(32)
+  )
+  Mux_16x1_NBits_i6 (
+    .sel( op ),
+    .in_0( 32'b0 ),
+    .in_1( 32'b0 ),
+    .in_2( 32'b0 ),
+    .in_3( 32'b0 ),
+    .in_4( 32'b0 ),
+    .in_5( 32'b0 ),
+    .in_6( 32'b0 ),
+    .in_7( s11 ),
+    .in_8( s12 ),
+    .in_9( 32'b0 ),
+    .in_10( 32'b0 ),
+    .in_11( 32'b0 ),
+    .in_12( 32'b0 ),
+    .in_13( 32'b0 ),
+    .in_14( 32'b0 ),
+    .in_15( 32'b0 ),
+    .out( high )
   );
   CompUnsigned #(
     .Bits(32)
   )
-  CompUnsigned_i6 (
-    .a( res_temp ),
+  CompUnsigned_i7 (
+    .a( low_temp ),
     .b( 32'b0 ),
     .\= ( isZero )
   );
-  assign res = res_temp;
+  assign res = low_temp;
+  assign low = low_temp;
 endmodule
 module DIG_RAMDualPort
 #(
@@ -1012,9 +1038,8 @@ module MIPS32SOC (
   wire [3:0] aluFunc;
   wire [31:0] s13;
   wire s14;
-  wire [31:0] mh;
-  wire [31:0] dl;
-  wire [31:0] ml;
+  wire [31:0] hi;
+  wire [31:0] lo;
   wire [15:0] s15;
   wire [31:0] s16;
   wire aluSrc;
@@ -1176,12 +1201,10 @@ module MIPS32SOC (
     .a( s8 ),
     .b( s12 ),
     .op( aluFunc ),
-    .clk( clk ),
     .res( s13 ),
     .isZero( s14 ),
-    .mult_high( mh ),
-    .div_low( dl ),
-    .mult_low( ml )
+    .high( hi ),
+    .low( lo )
   );
   Mux_2x1_NBits #(
     .Bits(32)
@@ -1244,7 +1267,7 @@ module MIPS32SOC (
     .Bits(32)
   )
   DIG_Register_BUS_i19 (
-    .D( mh ),
+    .D( hi ),
     .C( clk ),
     .en( RegWrite ),
     .Q( x )
@@ -1254,7 +1277,7 @@ module MIPS32SOC (
     .Bits(32)
   )
   DIG_Register_BUS_i20 (
-    .D( ml ),
+    .D( lo ),
     .C( clk ),
     .en( RegWrite ),
     .Q( y )
